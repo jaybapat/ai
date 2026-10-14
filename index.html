@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050906">
   <title>Multi-Model Chat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,35 +13,39 @@
       color-scheme: dark;
       --bg: #050906;
       --surface: #0b120d;
-      --surface-raised: #101a12;
+      --raised: #101a12;
       --line: #243d2a;
       --green: #73ff85;
+      --green-deep: #2f6b3a;
       --text: #e0f0e2;
+      --muted: #7d967f;
       --mono: "DM Mono", "Courier New", monospace;
+      --display: "Orbitron", var(--mono);
     }
     * { box-sizing: border-box; }
+    html { background: var(--bg); }
     body {
       position: relative;
       isolation: isolate;
+      margin: 0;
+      height: 100vh;
+      height: 100dvh;
+      max-width: 860px;
+      margin-inline: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       font-family: var(--mono);
       color: var(--text);
       background: var(--bg);
-      margin: 0;
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      max-width: 900px;
-      margin-inline: auto;
-      padding: 20px;
-      gap: 14px;
     }
-    body::before {
-      content: "01001000 01000001 01000011 01001011 00100000 01010100 01001000 01000101 00100000 01010000 01001100 01000001 01001110 01000101 01010100";
+
+    /* Backdrop texture */
+    #bg {
       position: fixed;
-      inset: 0 0 0 auto;
+      inset: 0;
       z-index: -1;
-      width: min(100vw, 900px);
       overflow: hidden;
       color: var(--green);
       opacity: 0.045;
@@ -48,14 +53,38 @@
       letter-spacing: 0.35em;
       overflow-wrap: anywhere;
       pointer-events: none;
-      animation: binary-drift 24s linear infinite;
+      -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+      animation: drift 30s ease-in-out infinite alternate;
     }
-    @keyframes binary-drift {
-      from { transform: translateY(-12px); }
-      to { transform: translateY(12px); }
+    @keyframes drift { from { transform: translateY(-14px); } to { transform: translateY(14px); } }
+
+    /* Header */
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 16px;
     }
-    header { display: flex; gap: 10px; }
-    #model, textarea, button {
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand h1 {
+      margin: 0;
+      font: 600 14px var(--display);
+      letter-spacing: 0.08em;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(115, 255, 133, 0.6);
+    }
+    .busy .dot { animation: pulse 0.9s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: 0.25; box-shadow: none; } }
+    .controls { flex: 1 1 280px; display: flex; gap: 10px; justify-content: flex-end; }
+
+    select, textarea, button {
       border: 1px solid var(--line);
       border-radius: 4px;
       background: var(--surface);
@@ -63,18 +92,38 @@
       font: 14px var(--mono);
       transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
     }
-    #model { flex: 1; min-width: 0; padding: 11px 12px; }
-    #model::placeholder, textarea::placeholder { color: #738b77; }
-    #chat {
+    select {
       flex: 1;
-      min-height: 180px;
+      max-width: 380px;
+      min-width: 0;
+      padding: 10px 34px 10px 12px;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2373ff85' stroke-width='1.6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+    select option { background: var(--surface); color: var(--text); }
+    button { padding: 9px 15px; cursor: pointer; white-space: nowrap; }
+    button:hover:not(:disabled), select:hover { border-color: var(--green); }
+    button:hover:not(:disabled) { box-shadow: 0 0 14px rgba(115, 255, 133, 0.14); }
+    button:disabled { cursor: wait; opacity: 0.55; }
+    :is(select, textarea, button):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    ::selection { background: var(--green); color: #061008; }
+
+    /* Chat log */
+    #chat {
+      position: relative;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      border: 1px solid var(--line);
-      border-radius: 5px;
       padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 18px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
       background: linear-gradient(135deg, rgba(10, 19, 12, 0.96), rgba(5, 9, 6, 0.96));
       box-shadow: inset 0 0 30px rgba(28, 75, 36, 0.08);
       scrollbar-color: #355b3b var(--surface);
@@ -82,64 +131,130 @@
     #chat:empty::before {
       content: "// secure channel open | awaiting input";
       margin: auto;
-      color: #607664;
+      color: var(--muted);
       font-size: 12px;
     }
-    .msg {
-      max-width: 85%;
+
+    .msg { overflow-wrap: anywhere; line-height: 1.65; }
+    .user {
+      align-self: flex-end;
+      max-width: 80%;
       padding: 10px 13px;
+      border: 1px solid #397444;
+      border-radius: 4px;
+      background: #102116;
+      white-space: pre-wrap;
+    }
+    .assistant {
+      align-self: stretch;
+      padding: 2px 0 2px 14px;
+      border-left: 2px solid var(--green-deep);
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .tag { color: var(--green); font: 600 10px var(--display); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+    .mini {
+      padding: 2px 9px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .mini:hover:not(:disabled) { color: var(--green); border-color: var(--line); box-shadow: none; }
+    .error { align-self: center; color: #ff8585; font-size: 13px; text-align: center; }
+
+    /* Formatted reply */
+    .md > :first-child { margin-top: 0; }
+    .md > :last-child { margin-bottom: 0; }
+    .md p { margin: 0 0 0.85em; white-space: pre-wrap; }
+    .md ul, .md ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+    .md li { margin: 0.25em 0; padding-left: 0.2em; }
+    .md li::marker { color: var(--green); }
+    .md .h { margin: 1.1em 0 0.5em; color: var(--green); font: 600 13px var(--display); letter-spacing: 0.04em; }
+    .md strong { color: #fff; font-weight: 500; }
+    .md :not(pre) > code {
+      padding: 1px 6px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: #0f2214;
+      font-size: 0.92em;
+    }
+    .codeblock {
+      margin: 0 0 0.9em;
       border: 1px solid var(--line);
       border-radius: 4px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      line-height: 1.6;
+      background: #070d09;
+      overflow: hidden;
     }
-    .user { align-self: flex-end; border-color: #397444; background: #102116; }
-    .assistant { align-self: flex-start; background: var(--surface-raised); }
-    .tag {
-      margin-bottom: 6px;
-      color: var(--green);
-      font: 600 10px "Orbitron", var(--mono);
-      overflow-wrap: anywhere;
+    .codehead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 6px 3px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #0a130c;
+      color: var(--muted);
+      font-size: 11px;
     }
-    .error { align-self: center; color: #ff8585; font-size: 13px; }
-    form { display: flex; gap: 10px; }
-    textarea { flex: 1; min-width: 0; padding: 11px 12px; resize: vertical; line-height: 1.5; }
-    button { padding: 9px 15px; cursor: pointer; }
-    #send {
-      border-color: var(--green);
-      background: var(--green);
-      color: #061008;
-      font-weight: 500;
+    .codeblock pre { margin: 0; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.55; color: #c9f5cf; scrollbar-color: #355b3b transparent; }
+
+    /* Thinking indicator */
+    .dots { display: inline-flex; gap: 5px; align-items: center; height: 1.65em; }
+    .dots i { width: 7px; height: 14px; background: var(--green); opacity: 0.2; animation: blink 1.2s infinite; }
+    .dots i:nth-child(2) { animation-delay: 0.2s; }
+    .dots i:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+    /* Composer */
+    form { display: flex; gap: 10px; align-items: flex-end; }
+    textarea {
+      flex: 1;
+      min-width: 0;
+      min-height: 3.4em;
+      max-height: 200px;
+      padding: 11px 12px;
+      resize: none;
+      line-height: 1.5;
     }
-    button:hover:not(:disabled) { border-color: var(--green); box-shadow: 0 0 14px rgba(115, 255, 133, 0.14); }
+    textarea::placeholder { color: #66806a; }
+    #send { border-color: var(--green); background: var(--green); color: #061008; font-weight: 500; padding: 11px 18px; }
     #send:hover:not(:disabled) { background: #a0ffab; }
-    button:disabled { cursor: wait; opacity: 0.55; }
-    :is(#model, textarea, button):focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-    ::selection { background: var(--green); color: #061008; }
+
     @media (max-width: 520px) {
       body { padding: 12px; gap: 10px; }
-      #chat { padding: 12px; }
-      .msg { max-width: 94%; }
-      header, form { gap: 7px; }
-      button { padding-inline: 11px; }
+      #chat { padding: 12px; gap: 16px; }
+      .user { max-width: 92%; }
+      .controls { flex-basis: 100%; }
+      select { max-width: none; }
     }
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
 <body>
+  <div id="bg" aria-hidden="true"></div>
+
   <header>
-    <input id="model" list="models" placeholder="Pick a model">
-    <datalist id="models"></datalist>
-    <button id="reset" type="button">New chat</button>
+    <div class="brand">
+      <span class="dot" aria-hidden="true"></span>
+      <h1>Multi-Model Chat</h1>
+    </div>
+    <div class="controls">
+      <select id="model" aria-label="Model"></select>
+      <button id="reset" type="button">New chat</button>
+    </div>
   </header>
 
-  <div id="chat"></div>
+  <div id="chat" role="log" aria-live="polite"></div>
 
   <form id="form">
-    <textarea id="prompt" rows="2" placeholder="Type a message (Enter to send, Shift+Enter for a new line)"></textarea>
+    <textarea id="prompt" rows="2" aria-label="Message" placeholder="Type a message (Enter to send, Shift+Enter for a new line)"></textarea>
     <button id="send" type="submit">Send</button>
   </form>
 
@@ -154,7 +269,10 @@
     const promptEl = document.getElementById("prompt");
     const sendBtn = document.getElementById("send");
     const modelEl = document.getElementById("model");
-    const datalist = document.getElementById("models");
+
+    document.getElementById("bg").textContent = Array(90).fill(
+      "01001000 01000001 01000011 01001011 00100000 01010100 01001000 01000101 00100000 01010000 01001100 01000001 01001110 01000101 01010100"
+    ).join(" ");
 
     function load(key, fallback) {
       try {
@@ -167,22 +285,156 @@
     }
 
     let history = load(HISTORY_KEY, []);
-    modelEl.value = load(MODEL_KEY, "");
+
+    /* ---------- formatting (built with DOM nodes, never innerHTML) ---------- */
+
+    function makeCopyButton(getText, label) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mini";
+      b.textContent = label;
+      b.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(getText());
+          b.textContent = "Copied";
+        } catch {
+          b.textContent = "Copy failed";
+        }
+        setTimeout(() => { b.textContent = label; }, 1400);
+      });
+      return b;
+    }
+
+    function appendInline(parent, text) {
+      const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*)/g;
+      let last = 0, m;
+      while ((m = re.exec(text))) {
+        if (m.index > last) parent.append(text.slice(last, m.index));
+        const tok = m[0];
+        if (tok[0] === "`") {
+          const c = document.createElement("code");
+          c.textContent = tok.slice(1, -1);
+          parent.append(c);
+        } else {
+          const s = document.createElement("strong");
+          s.textContent = tok.slice(2, -2);
+          parent.append(s);
+        }
+        last = m.index + tok.length;
+      }
+      if (last < text.length) parent.append(text.slice(last));
+    }
+
+    function makeCodeBlock(code, lang) {
+      const wrap = document.createElement("div");
+      wrap.className = "codeblock";
+      const head = document.createElement("div");
+      head.className = "codehead";
+      const label = document.createElement("span");
+      label.textContent = lang || "text";
+      head.append(label, makeCopyButton(() => code, "Copy"));
+      const pre = document.createElement("pre");
+      const c = document.createElement("code");
+      c.textContent = code;
+      pre.appendChild(c);
+      wrap.append(head, pre);
+      return wrap;
+    }
+
+    function renderMarkdown(text) {
+      const frag = document.createDocumentFragment();
+      const lines = text.replace(/\r\n/g, "\n").split("\n");
+      let para = [];
+      let list = null;
+
+      const flushPara = () => {
+        if (!para.length) return;
+        const p = document.createElement("p");
+        appendInline(p, para.join("\n"));
+        frag.appendChild(p);
+        para = [];
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        const fence = line.match(/^\s*```\s*([\w+-]*)/);
+        if (fence) {
+          flushPara(); list = null;
+          const code = [];
+          i++;
+          while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
+          frag.appendChild(makeCodeBlock(code.join("\n"), fence[1]));
+          continue;
+        }
+
+        if (/^\s*\|/.test(line)) {
+          flushPara(); list = null;
+          const rows = [line];
+          while (i + 1 < lines.length && /^\s*\|/.test(lines[i + 1])) rows.push(lines[++i]);
+          frag.appendChild(makeCodeBlock(rows.join("\n"), "table"));
+          continue;
+        }
+
+        const heading = line.match(/^#{1,4}\s+(.*)/);
+        if (heading) {
+          flushPara(); list = null;
+          const h = document.createElement("div");
+          h.className = "h";
+          appendInline(h, heading[1]);
+          frag.appendChild(h);
+          continue;
+        }
+
+        const bullet = line.match(/^\s*[-*\u2022]\s+(.*)/);
+        const numbered = line.match(/^\s*(\d+)[.)]\s+(.*)/);
+        if (bullet || numbered) {
+          flushPara();
+          const ordered = !bullet;
+          if (!list || list.ordered !== ordered) {
+            const el = document.createElement(ordered ? "ol" : "ul");
+            if (ordered) el.start = Number(numbered[1]);
+            list = { ordered, el };
+            frag.appendChild(el);
+          }
+          const li = document.createElement("li");
+          appendInline(li, bullet ? bullet[1] : numbered[2]);
+          list.el.appendChild(li);
+          continue;
+        }
+
+        if (!line.trim()) { flushPara(); list = null; continue; }
+
+        list = null;
+        para.push(line);
+      }
+      flushPara();
+      return frag;
+    }
+
+    /* ---------- chat UI ---------- */
 
     function addBubble(role, text, model) {
       const div = document.createElement("div");
       div.className = "msg " + role;
-      if (role === "assistant" && model) {
-        const tag = document.createElement("div");
+
+      if (role === "assistant") {
+        const head = document.createElement("div");
+        head.className = "head";
+        const tag = document.createElement("span");
         tag.className = "tag";
-        tag.textContent = model;
-        div.appendChild(tag);
+        tag.textContent = model || "assistant";
+        head.append(tag, makeCopyButton(() => text, "Copy"));
+        const body = document.createElement("div");
+        body.className = "md";
+        body.appendChild(renderMarkdown(text));
+        div.append(head, body);
+      } else {
+        div.textContent = text;
       }
-      const body = document.createElement("div");
-      body.textContent = text;
-      div.appendChild(body);
+
       chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+      return div;
     }
 
     function showError(text) {
@@ -190,31 +442,76 @@
       div.className = "error";
       div.textContent = text;
       chat.appendChild(div);
+      scrollToEnd();
+    }
+
+    function scrollToEnd() {
       chat.scrollTop = chat.scrollHeight;
+    }
+    function scrollToMessage(el) {
+      chat.scrollTop = Math.max(0, el.offsetTop - 12);
     }
 
     function render() {
       chat.replaceChildren();
       history.forEach((m) => addBubble(m.role, m.content, m.model));
+      scrollToEnd();
     }
+
+    function showThinking(model) {
+      const div = document.createElement("div");
+      div.className = "msg assistant";
+      div.id = "thinking";
+      const head = document.createElement("div");
+      head.className = "head";
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = model;
+      head.appendChild(tag);
+      const dots = document.createElement("span");
+      dots.className = "dots";
+      dots.innerHTML = "<i></i><i></i><i></i>";
+      div.append(head, dots);
+      chat.appendChild(div);
+      scrollToEnd();
+    }
+    function hideThinking() {
+      const el = document.getElementById("thinking");
+      if (el) el.remove();
+    }
+    function setBusy(on) {
+      document.body.classList.toggle("busy", on);
+    }
+
+    function autosize() {
+      promptEl.style.height = "auto";
+      promptEl.style.height = Math.min(promptEl.scrollHeight, 200) + "px";
+    }
+    promptEl.addEventListener("input", autosize);
+
+    /* ---------- models ---------- */
 
     async function loadModels() {
       try {
         const r = await fetch(API + "/api/models");
         const { models } = await r.json();
-        models.forEach((id) => datalist.appendChild(new Option(id)));
-        if (!modelEl.value && models.length) modelEl.value = models[0];
+        modelEl.replaceChildren(...models.map((id) => new Option(id, id)));
+        const saved = load(MODEL_KEY, "");
+        modelEl.value = models.includes(saved) ? saved : models[0];
+        save(MODEL_KEY, modelEl.value);
       } catch {
         showError("Couldn't load the model list.");
       }
     }
 
-    modelEl.addEventListener("change", () => save(MODEL_KEY, modelEl.value.trim()));
+    modelEl.addEventListener("change", () => save(MODEL_KEY, modelEl.value));
+
+    /* ---------- sending ---------- */
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = promptEl.value.trim();
-      const model = modelEl.value.trim();
+      const model = modelEl.value;
       if (!text) return;
       if (!model) return showError("Pick a model first.");
       save(MODEL_KEY, model);
@@ -223,7 +520,10 @@
       save(HISTORY_KEY, history);
       addBubble("user", text);
       promptEl.value = "";
+      autosize();
       sendBtn.disabled = true;
+      setBusy(true);
+      showThinking(model);
 
       try {
         const messages = history.slice(-MAX_SENT).map(({ role, content }) => ({ role, content }));
@@ -238,15 +538,19 @@
 
         history.push({ role: "assistant", content: reply, model });
         save(HISTORY_KEY, history);
-        addBubble("assistant", reply, model);
+        hideThinking();
+        scrollToMessage(addBubble("assistant", reply, model));
       } catch (err) {
         // roll back the failed message so history stays clean, and restore the text
-        history.pop();
+        if (history.length && history[history.length - 1].role === "user") history.pop();
         save(HISTORY_KEY, history);
         render();
         promptEl.value = text;
+        autosize();
         showError("Error: " + err.message);
       } finally {
+        hideThinking();
+        setBusy(false);
         sendBtn.disabled = false;
         promptEl.focus();
       }
