@@ -1,28 +1,58 @@
 import { MODELS } from "./_models.js";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+const ALLOWED_ORIGIN = "https://jaybapat.github.io";
 
-  const { model, messages } = req.body || {};
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(204).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+
+  const apiKey = process.env.HACKCLUB_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: "HACKCLUB_API_KEY is not set in Vercel." });
+  }
+
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  const { model, messages } = body;
 
   if (!MODELS.includes(model)) {
-    return res.status(400).json({ error: "Model not allowed" });
+    return res.status(400).json({ error: "Model not allowed." });
   }
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
-    return res.status(400).json({ error: "Invalid messages" });
+
+  const validMessages =
+    Array.isArray(messages) &&
+    messages.length >= 1 &&
+    messages.length <= 50 &&
+    messages.every(
+      (m) =>
+        m &&
+        (m.role === "user" || m.role === "assistant") &&
+        typeof m.content === "string" &&
+        m.content.length > 0 &&
+        m.content.length <= 8000
+    );
+
+  if (!validMessages) {
+    return res.status(400).json({ error: "Invalid messages." });
   }
 
   try {
     const r = await fetch("https://ai.hackclub.com/proxy/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.HACKCLUB_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ model, messages }),
     });
-    res.status(r.status).json(await r.json());
+    const data = await r.json().catch(() => ({}));
+    return res.status(r.status).json(data);
   } catch {
-    res.status(502).json({ error: "Could not reach the AI service" });
+    return res.status(502).json({ error: "Could not reach the AI service." });
   }
 }

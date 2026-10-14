@@ -144,6 +144,7 @@
   </form>
 
   <script>
+    const API = "https://ai-three-fawn-59.vercel.app";
     const HISTORY_KEY = "mm-chat-history";
     const MODEL_KEY = "mm-chat-model";
     const MAX_SENT = 20; // only the last 20 messages go to the API, to save credits
@@ -199,7 +200,7 @@
 
     async function loadModels() {
       try {
-        const r = await fetch("/api/models");
+        const r = await fetch(API + "/api/models");
         const { models } = await r.json();
         models.forEach((id) => datalist.appendChild(new Option(id)));
         if (!modelEl.value && models.length) modelEl.value = models[0];
@@ -226,7 +227,7 @@
 
       try {
         const messages = history.slice(-MAX_SENT).map(({ role, content }) => ({ role, content }));
-        const r = await fetch("/api/chat", {
+        const r = await fetch(API + "/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model, messages }),
